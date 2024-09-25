@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>轻舟性格测评</title>
+    <style>
+        
+        .logo {
+            text-align: center;
+            /* 容器样式 */
+            font-size: 2.25rem;
+            font-family: 'Microsoft YaHei', ui-sans-serif; /* 使用Arial字体或你选择的字体 */
+            line-height: 2.5rem;
+            margin-bottom: 25px;
+            color: #47b3b1; /* 设置字体颜色为灰色 */
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        #chat-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #0084ff;
+            color: white;
+            align-self: flex-end;
+            white-space: pre-wrap;
+        }
+        .ai-message {
+            background-color: #e4e6eb;
+            color: black;
+            align-self: flex-start;
+            white-space: pre-wrap;
+            max-width: 300px;
+        }
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+        }
+        #send-button {
+            padding: 10px 20px;
+            background-color: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 10px;
+            color: #65676b;
+        }
+        .loading:after {
+            content: '.';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% {
+                color: rgba(0,0,0,0);
+                text-shadow:
+                    .25em 0 0 rgba(0,0,0,0),
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            40% {
+                color: #65676b;
+                text-shadow:
+                    .25em 0 0 rgba(0,0,0,0),
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            60% {
+                text-shadow:
+                    .25em 0 0 #65676b,
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            80%, 100% {
+                text-shadow:
+                    .25em 0 0 #65676b,
+                    .5em 0 0 #65676b;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="logo">免费MBTI性格测试</h1>
+    <div id="chat-container"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="输入消息...">
+        <button id="send-button">发送</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var conversationHistory = [];
+
+            function addMessage(message, isUser) {
+                var messageClass = isUser ? 'user-message' : 'ai-message';
+                $('#chat-container').append('<div class="message ' + messageClass + '">' + message + '</div>');
+                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+                
+                conversationHistory.push({role: isUser ? "user" : "assistant", content: message});
+            }
+
+            function addLoading() {
+                $('#chat-container').append('<div class="loading">小舟正在输入中</div>');
+                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+            }
+
+            function removeLoading() {
+                $('.loading').remove();
+            }
+
+            $('#send-button').click(function() {
+                var message = $('#user-input').val();
+                if (message) {
+                    addMessage(message, true);
+                    $('#user-input').val('');
+                    addLoading();
+                    $.ajax({
+                        url: '/send_message',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            message: message,
+                            history: conversationHistory
+                        }),
+                        success: function(data) {
+                            removeLoading();
+                            addMessage(data.response, false);
+                        }
+                    });
+                }
+            });
+
+            $('#user-input').keypress(function(e) {
+                if (e.which == 13) {
+                    $('#send-button').click();
+                    return false;
+                }
+            });
+            addLoading();
+            setTimeout(function() {
+                removeLoading();
+                addMessage("您好，我是小舟，您的MBTI评测助手！很高兴与你相遇，你准备好开始了嘛？", false);
+            }, 1000);
+           
+        });
+    </script>
+</body>
+</html>
