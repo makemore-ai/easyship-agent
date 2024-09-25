@@ -1,5 +1,12 @@
 from flask import Flask, render_template, request, jsonify
-import openai
+from openai import OpenAI
+
+
+client = OpenAI(
+    api_key="sk-3UeL3PLphF5BpAbR0HSkIplYiqYIIGo9pBl17CRwHqOClDTV", # <--在这里将 MOONSHOT_API_KEY 替换为你从 Kimi 开放平台申请的 API Key
+    base_url="https://api.moonshot.cn/v1", # <-- 将 base_url 从 https://api.openai.com/v1 替换为 https://api.moonshot.cn/v1
+)
+
 
 app = Flask(__name__)
 
@@ -35,8 +42,6 @@ D. 感到有些紧张，不知道该如何融入😟
 """
 
 # 配置OpenAI客户端
-openai.api_key = "sk-3UeL3PLphF5BpAbR0HSkIplYiqYIIGo9pBl17CRwHqOClDTV"
-openai.api_base = "https://api.moonshot.cn/v1"
 
 @app.route('/')
 def index():
@@ -57,7 +62,7 @@ def send_message():
         messages.append({"role": "user", "content": message})
 
         # 调用Moonshot AI的API
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="moonshot-v1-8k",
             messages=messages,
             max_tokens=500,
