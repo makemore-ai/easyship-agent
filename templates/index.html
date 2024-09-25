@@ -145,7 +145,7 @@
                     $('#user-input').val('');
                     addLoading();
                     $.ajax({
-                        url: '/send_message',
+                        url: '/agent/send_message',
                         method: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify({
