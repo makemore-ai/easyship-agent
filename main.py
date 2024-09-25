@@ -71,4 +71,4 @@ def send_message():
     return jsonify({'response': ai_response})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8081)
