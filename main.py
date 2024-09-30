@@ -55,7 +55,7 @@ def index():
         html_content = file.read()
     return HTMLResponse(content=html_content, status_code=200)
 
-@app.post('/agent/send_message')
+@app.post('/send_message')
 async def send_message(request: Request):
     data =  await request.json()
     print(data)
