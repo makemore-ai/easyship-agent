@@ -119,6 +119,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
+            addLoading();
             var conversationHistory = [];
 
             function addMessage(message, isUser, div_id="system-1") {
@@ -162,7 +163,7 @@
                     dataStrList = tempStr.split(': ')
                     if (dataStrList[0] == "data") {
                         if (dataStrList[1].trim().length == 0) {
-                            dataStr += i > 0 ? "<br/>": ""
+                            dataStr += i > 0 ? "\n": ""
                         } else {
                             dataStr += dataStrList[1]
                         }
@@ -205,7 +206,6 @@
                             return reader.read().then(({ done, value }) => {
                                 // 检查是否读取完毕
                                 if (done) {
-                                    console.log("index:", index)
                                     if (index > 0) {
                                         chat_div = document.getElementById(div_id)
                                         let chat_val = chat_div.innerHTML
@@ -213,7 +213,6 @@
                                      
                                         conversationHistory[index]['content'] = chat_val
                                     }
-                                    console.log('已传输完毕');
                                     return;
                                 }
                                 dataStr = handleSSEStreamData(new TextDecoder().decode(value));
@@ -223,13 +222,11 @@
                                     return;
                                 }
                                 // 处理每个数据块
-                                console.log('收到的数据:', dataStr);
                                 if (div_id.length == 0) {
                                     div_id = "system-" + Date.now()
                                     index = addMessage(dataStr, false, div_id)
                                 } else {
                                     chat_div = document.getElementById(div_id)
-                                    console.log("div_id: chat_div:", div_id, chat_div)
                                     let chat_val = chat_div.innerHTML
                                     if (chat_val == undefined) {
                                         chat_val = ""
@@ -275,7 +272,7 @@
                     return false;
                 }
             });
-            addLoading();
+           
             setTimeout(function() {
                 removeLoading();
                 addMessage("您好，我是小舟，您的评测助手！很高兴与你相遇，你准备好开始了嘛？", false);
