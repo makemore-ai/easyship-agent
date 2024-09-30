@@ -109,7 +109,7 @@
     </style>
 </head>
 <body>
-    <h1 class="logo">免费MBTI性格测试</h1>
+    <h1 class="logo">免费性格测试</h1>
     <div id="chat-container"></div>
     <div id="input-container">
         <input type="text" id="user-input" placeholder="输入消息...">
@@ -121,12 +121,20 @@
         $(document).ready(function() {
             var conversationHistory = [];
 
-            function addMessage(message, isUser) {
+            function addMessage(message, isUser, div_id="system-1") {
                 var messageClass = isUser ? 'user-message' : 'ai-message';
-                $('#chat-container').append('<div class="message ' + messageClass + '">' + message + '</div>');
+                div_html = ""
+                if (isUser) {
+                    div_html = $('#chat-container').append('<div class="message ' + messageClass + '">' + message + '</div>');
+                }
+                else {
+                   div_html = '<div id =' + div_id + ' class="message ' + messageClass + '">' + message + '</div>';  
+                }
+                $('#chat-container').append(div_html)    
                 $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
                 
                 conversationHistory.push({role: isUser ? "user" : "assistant", content: message});
+                return conversationHistory.length - 1
             }
 
             function addLoading() {
@@ -137,6 +145,32 @@
             function removeLoading() {
                 $('.loading').remove();
             }
+            function splitByNewline(str) {
+                // 使用正则表达式匹配所有类型的换行符
+                const regex = /\r\n|\n|\r/;
+                return str.split(regex);
+            }
+
+            function handleSSEStreamData(sse_data) {
+                let strList =  splitByNewline(sse_data)
+                let dataStr = ""
+                for (let i = 0; i < strList.length; i++) {
+                    tempStr = strList[i]
+                    if (tempStr.length == 0) {
+                        continue
+                    }
+                    dataStrList = tempStr.split(': ')
+                    if (dataStrList[0] == "data") {
+                        if (dataStrList[1].trim().length == 0) {
+                            dataStr += i > 0 ? "<br/>": ""
+                        } else {
+                            dataStr += dataStrList[1]
+                        }
+                    }
+                }
+                return dataStr
+            }
+            
 
             $('#send-button').click(function() {
                 var message = $('#user-input').val();
@@ -144,21 +178,96 @@
                     addMessage(message, true);
                     $('#user-input').val('');
                     addLoading();
-                    $.ajax({
-                        url: '/agent/send_message',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({
+                    // 发送 POST 请求
+                    fetch('/agent/send_message', {
+                        method:"POST",
+                        body: JSON.stringify({
                             message: message,
                             history: conversationHistory
                         }),
-                        success: function(data) {
-                            removeLoading();
-                            addMessage(data.response, false);
+                        timeout: 0,
+                        dataType:"text/event-stream",
+                        headers:{
+                        "Content-Type":"application/json"
+                        },
+                    }).then(response => {
+                        // 检查响应是否成功
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
                         }
-                    });
+                        // 返回一个可读流
+                        return response.body;
+                    }).then(body => {
+                        removeLoading();
+                        const reader = body.getReader();
+                        // 读取数据流
+                        function read(div_id='', index=0) {
+                            return reader.read().then(({ done, value }) => {
+                                // 检查是否读取完毕
+                                if (done) {
+                                    console.log("index:", index)
+                                    if (index > 0) {
+                                        chat_div = document.getElementById(div_id)
+                                        let chat_val = chat_div.innerHTML
+                                        chat_val = chat_val.replaceAll('<br>', '\n')
+                                     
+                                        conversationHistory[index]['content'] = chat_val
+                                    }
+                                    console.log('已传输完毕');
+                                    return;
+                                }
+                                dataStr = handleSSEStreamData(new TextDecoder().decode(value));
+                                if (dataStr.length == 0) {
+                                    // 继续
+                                    read(div_id, index);
+                                    return;
+                                }
+                                // 处理每个数据块
+                                console.log('收到的数据:', dataStr);
+                                if (div_id.length == 0) {
+                                    div_id = "system-" + Date.now()
+                                    index = addMessage(dataStr, false, div_id)
+                                } else {
+                                    chat_div = document.getElementById(div_id)
+                                    console.log("div_id: chat_div:", div_id, chat_div)
+                                    let chat_val = chat_div.innerHTML
+                                    if (chat_val == undefined) {
+                                        chat_val = ""
+                                    }
+                                    dataStr = dataStr.replace(/\n/g, "<br>");
+                                    chat_div.innerHTML = chat_val + dataStr
+                                    $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+                                    
+                                }
+                                // 继续读取下一个数据块
+                                read(div_id, index);
+                        });
+                }
+                // 开始读取数据流
+                read();
+            }).catch(error => {console.error('Fetch error:', error);});
                 }
             });
+
+            $('#user-input').keypress(function(e) {
+                if (e.which == 13) {
+                    $('#send-button').click();
+                    return false;
+                }
+            });
+                    // $.ajax({
+                    //     url: '/agent/send_message',
+                    //     method: 'POST',
+                    //     contentType: 'application/json',
+                    //     data: JSON.stringify({
+                    //         message: message,
+                    //         history: conversationHistory
+                    //     }),
+                    //     success: function(data) {
+                    //         removeLoading();
+                    //         addMessage(data.response, false);
+                    //     }
+                    // });
 
             $('#user-input').keypress(function(e) {
                 if (e.which == 13) {
@@ -169,7 +278,7 @@
             addLoading();
             setTimeout(function() {
                 removeLoading();
-                addMessage("您好，我是小舟，您的MBTI评测助手！很高兴与你相遇，你准备好开始了嘛？", false);
+                addMessage("您好，我是小舟，您的评测助手！很高兴与你相遇，你准备好开始了嘛？", false);
             }, 1000);
            
         });
