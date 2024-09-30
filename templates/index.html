@@ -162,6 +162,7 @@
                     }
                     dataStrList = tempStr.split(': ')
                     if (dataStrList[0] == "data") {
+                        dataStrList[1] = dataStrList[1].replace(/\n/g, "");
                         if (dataStrList[1].trim().length == 0) {
                             dataStr += i > 0 ? "\n": ""
                         } else {
